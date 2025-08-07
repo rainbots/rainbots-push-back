@@ -1,0 +1,21 @@
+[package]
+name = "rainbots"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# These fields configure default behavior for uploads with `cargo v5`.
+[package.metadata.v5]
+upload-strategy = "differential"
+slot = 1
+icon = "cool-x"
+compress = true
+
+[dependencies]
+vexide = "0.7.0"
+
+[dependencies.evian]
+git = "https://github.com/vexide/evian.git"
+# curvature drive + differential models
+rev = "dd399afe57692ce9d008cf996dac0db9b6a02d80"
