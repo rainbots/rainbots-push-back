@@ -20,6 +20,7 @@ impl Compete for Jodio {
     async fn autonomous(&mut self) {
         // 黄金の回転
         self.dt.model.drive_tank(-1.0, 1.0).expect("couldn't 回転");
+        sleep(Duration::from_millis(10)).await;
     }
 
     async fn driver(&mut self) {
