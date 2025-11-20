@@ -24,7 +24,7 @@ impl Compete for Jodio {
     }
 
     async fn driver(&mut self) {
-        let state = self.ctrl.state().expect("couldn't get controller state");
+        let state = self.ctrl.state().unwrap_or_default();
         self.curvature
             .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
             .expect("couldn't set drivetrain voltages");
