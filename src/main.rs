@@ -42,20 +42,14 @@ async fn main(peris: Peripherals) {
         dt: Drivetrain {
             model: Differential::new(
                 [
-                    motor(peris.port_1),
+                    motor(peris.port_8),
                     motor(peris.port_2),
-                    motor(peris.port_3),
-                    motor(peris.port_4),
-                    motor(peris.port_5),
-                    motor(peris.port_6),
+                    motor(peris.port_1),
                 ],
                 [
-                    motor(peris.port_11),
-                    motor(peris.port_12),
-                    motor(peris.port_13),
-                    motor(peris.port_14),
+                    motor(peris.port_20),
                     motor(peris.port_15),
-                    motor(peris.port_16),
+                    motor(peris.port_14),
                 ],
             ),
             tracking: (),
