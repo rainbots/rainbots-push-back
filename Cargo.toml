@@ -17,5 +17,5 @@ vexide = { version = "0.8.0", features = ["full", "default-sdk"] }
 
 [dependencies.evian]
 git = "https://github.com/vexide/evian.git"
-# vexide 0.8.0 + curvature drive + differential models
+# vexide 0.8.0 + differential models
 rev = "bc300becbbbc8612de4a0d559fc66159040cd841"

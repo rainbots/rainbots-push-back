@@ -2,7 +2,7 @@ mod banner;
 
 use std::time::Duration;
 
-use evian::{drivetrain::model::Differential, motion::CurvatureDrive, prelude::*};
+use evian::{drivetrain::model::Differential, prelude::*};
 use vexide::{prelude::*, smart::SmartPort};
 
 use crate::banner::THEME_RAINBOTS;
@@ -10,7 +10,6 @@ use crate::banner::THEME_RAINBOTS;
 struct Jodio {
     dt: Drivetrain<Differential, ()>,
     ctrl: Controller,
-    curvature: CurvatureDrive,
 }
 
 impl Compete for Jodio {
@@ -25,8 +24,9 @@ impl Compete for Jodio {
     async fn driver(&mut self) {
         loop {
             let state = self.ctrl.state().unwrap_or_default();
-            self.curvature
-                .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
+            self.dt
+                .model
+                .drive_arcade(state.left_stick.y(), state.left_stick.x())
                 .expect("couldn't set drivetrain voltages");
             sleep(Duration::from_millis(10)).await;
         }
@@ -56,14 +56,6 @@ async fn main(peris: Peripherals) {
             tracking: (),
         },
         ctrl: peris.primary_controller,
-        // TODO: tune consts
-        curvature: CurvatureDrive::new(
-            0.0, // turn_nonlinearity,
-            0.0, // deadzone,
-            0.0, // slew,
-            0.0, // negative_inertia_scalar,
-            0.0, // turn_sensitivity,
-        ),
     };
 
     jodio.compete().await;
