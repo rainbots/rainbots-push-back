@@ -15,17 +15,21 @@ struct Jodio {
 
 impl Compete for Jodio {
     async fn autonomous(&mut self) {
-        // 黄金の回転
-        self.dt.model.drive_tank(-1.0, 1.0).expect("couldn't 回転");
-        sleep(Duration::from_millis(10)).await;
+        loop {
+            // 黄金の回転
+            self.dt.model.drive_tank(-1.0, 1.0).expect("couldn't 回転");
+            sleep(Duration::from_millis(10)).await;
+        }
     }
 
     async fn driver(&mut self) {
-        let state = self.ctrl.state().unwrap_or_default();
-        self.curvature
-            .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
-            .expect("couldn't set drivetrain voltages");
-        sleep(Duration::from_millis(10)).await;
+        loop {
+            let state = self.ctrl.state().unwrap_or_default();
+            self.curvature
+                .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
+                .expect("couldn't set drivetrain voltages");
+            sleep(Duration::from_millis(10)).await;
+        }
     }
 }
 
