@@ -13,9 +13,9 @@ icon = "cool-x"
 compress = true
 
 [dependencies]
-vexide = "0.7.0"
+vexide = { version = "0.8.0", features = ["full", "default-sdk"] }
 
 [dependencies.evian]
 git = "https://github.com/vexide/evian.git"
-# curvature drive + differential models
-rev = "dd399afe57692ce9d008cf996dac0db9b6a02d80"
+# vexide 0.8.0 + curvature drive + differential models
+rev = "bc300becbbbc8612de4a0d559fc66159040cd841"

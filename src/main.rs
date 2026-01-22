@@ -1,12 +1,9 @@
-#![no_main]
-#![no_std]
-
 mod banner;
 
-use core::time::Duration;
+use std::time::Duration;
 
 use evian::{drivetrain::model::Differential, motion::CurvatureDrive, prelude::*};
-use vexide::prelude::*;
+use vexide::{prelude::*, smart::SmartPort};
 
 use crate::banner::THEME_RAINBOTS;
 
