@@ -1,5 +1,6 @@
 mod auton;
 mod banner;
+mod curvature;
 mod intake;
 
 use std::time::Duration;
@@ -12,7 +13,13 @@ use evian::{
 };
 use vexide::{prelude::*, smart::SmartPort};
 
-use crate::{banner::THEME_RAINBOTS, intake::Intake};
+use crate::{banner::THEME_RAINBOTS, curvature::CurvatureDrive, intake::Intake};
+
+const TURN_NONLINEARITY: f64 = 0.65;
+const TURN_SENSITIVITY: f64 = 0.8;
+const DEADZONE: f64 = 4.0 / 100.0;
+const SLEW: f64 = 0.3;
+const NEGATIVE_INERTIA_SCALAR: f64 = 4.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Alliance {
@@ -23,6 +30,7 @@ enum Alliance {
 struct Jodio {
     dt: Drivetrain<Differential, WheeledTracking>,
     intake: intake::Intake,
+    curvature: CurvatureDrive,
     ctrl: Controller,
 }
 
@@ -35,10 +43,13 @@ impl Compete for Jodio {
         self.intake.set_active();
         loop {
             let state = self.ctrl.state().unwrap_or_default();
-            self.dt
-                .model
-                .drive_arcade(state.left_stick.y(), state.left_stick.x())
+            self.curvature
+                .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
                 .expect("couldn't set drivetrain voltages");
+            // self.dt
+            //     .model
+            //     .drive_arcade(state.left_stick.y(), state.right_stick.x())
+            //     .expect("couldn't set drivetrain voltages");
 
             self.intake.update().expect("couldn't drive intake");
             sleep(Duration::from_millis(10)).await;
@@ -101,6 +112,13 @@ async fn main(peris: Peripherals) {
                 }),
             ),
         },
+        curvature: CurvatureDrive::new(
+            TURN_NONLINEARITY,
+            DEADZONE,
+            SLEW,
+            NEGATIVE_INERTIA_SCALAR,
+            TURN_SENSITIVITY,
+        ),
         intake: Intake::new(
             Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
             Motor::new(peris.port_18, Gearset::Blue, Direction::Forward),
