@@ -37,7 +37,6 @@ pub struct CurvatureDrive {
     prev_turn: f64,
     prev_throttle: f64,
     negative_inertia_accumulator: f64,
-    quick_stop_accumulator: f64,
 }
 
 impl CurvatureDrive {
@@ -45,8 +44,9 @@ impl CurvatureDrive {
     ///
     /// # Constants
     ///
-    /// * `turn_nonlinearity` - Determines how fast the robot's turn traverses a sine curve, and
-    ///   affects its nonlinearity
+    /// * `turn_nonlinearity` - Determines how the robot's turn is remapped. A high value will
+    /// cause slow turns to be remapped into faster ones. Value should be in the range (0, 1].
+    /// the range (0, 1].
     /// * `deadzone` - Minimum value for `turn` and `throttle` to not ignore and round down to
     ///   zero, creates a deadzone at the center of the joystick
     /// * `slew` - Tunes throttle
@@ -71,7 +71,6 @@ impl CurvatureDrive {
             prev_turn: 0.0,
             prev_throttle: 0.0,
             negative_inertia_accumulator: 0.0,
-            quick_stop_accumulator: 0.0,
         }
     }
 
@@ -101,31 +100,34 @@ impl CurvatureDrive {
         let mut turn_in_place = false;
         let mut linear_power = throttle;
 
+        let delta_throttle = throttle - self.prev_throttle;
+
         if throttle.abs() < self.deadzone && turn.abs() > self.deadzone {
             // deadzone checking
             linear_power = 0.0;
             turn_in_place = true;
-        } else if throttle - self.prev_throttle > self.slew {
+        } else if delta_throttle > self.slew {
             linear_power = self.prev_throttle + self.slew;
-        } else if throttle - self.prev_throttle < -(self.slew * 2.0) {
+        } else if delta_throttle < -(self.slew * 2.0) {
             // slew rate is doubled in the opposite direction for faster stopping
             linear_power = self.prev_throttle - (self.slew * 2.0);
         }
 
+        // turn is remapped using a sine function whose waviness is determined by turn nonlinearity
         let remapped_turn = self.remap_turn(turn);
 
         let (linear_power, angular_power) = if turn_in_place {
+            // square function
             (0.0, remapped_turn * remapped_turn.abs())
         } else {
-            let neg_inertia_power = (turn - self.prev_turn) * self.negative_inertia_scalar;
+            let delta_turn = turn - self.prev_turn;
+            let neg_inertia_power = delta_turn * self.negative_inertia_scalar;
             self.negative_inertia_accumulator += neg_inertia_power;
 
-            let angular_power = linear_power.abs()
-                * (remapped_turn + self.negative_inertia_accumulator)
-                * self.turn_sensitivity
-                - self.quick_stop_accumulator;
+            let angular_power = (remapped_turn + self.negative_inertia_accumulator)
+                * linear_power.abs() // scaled by throttle,
+                * self.turn_sensitivity; // and scaled by sensitivity constant (driver preference)
 
-            Self::update_accumulator(&mut self.quick_stop_accumulator);
             Self::update_accumulator(&mut self.negative_inertia_accumulator);
 
             (linear_power, angular_power)
@@ -140,7 +142,7 @@ impl CurvatureDrive {
     fn remap_turn(&self, turn: f64) -> f64 {
         let denominator = (FRAC_PI_2 * self.turn_nonlinearity).sin();
         let first_remap = (FRAC_PI_2 * self.turn_nonlinearity * turn).sin() / denominator;
-        (FRAC_PI_2 * self.turn_nonlinearity * first_remap) / denominator
+        (FRAC_PI_2 * self.turn_nonlinearity * first_remap).sin() / denominator
     }
 
     // On each iteration of the drive loop where we aren't point turning, the accumulators are
