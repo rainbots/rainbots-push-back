@@ -2,8 +2,9 @@ mod auton;
 mod banner;
 mod curvature;
 mod intake;
+mod wing;
 
-use std::time::Duration;
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use evian::{
     drivetrain::model::Differential,
@@ -11,9 +12,14 @@ use evian::{
     prelude::*,
     tracking::wheeled::{TrackingWheel, WheeledTracking},
 };
-use vexide::{prelude::*, smart::SmartPort};
+use vexide::{prelude::*, smart::SmartPort, task::Task};
 
-use crate::{banner::THEME_RAINBOTS, curvature::CurvatureDrive, intake::Intake};
+use crate::{
+    banner::THEME_RAINBOTS,
+    curvature::CurvatureDrive,
+    intake::{Command, Intake},
+    wing::Wing,
+};
 
 const TURN_NONLINEARITY: f64 = 0.65;
 const TURN_SENSITIVITY: f64 = 0.8;
@@ -29,9 +35,16 @@ enum Alliance {
 
 struct Jodio {
     dt: Drivetrain<Differential, WheeledTracking>,
-    intake: intake::Intake,
+    _intake_task: Task<()>,
+    intake_command: Rc<RefCell<Command>>,
     curvature: CurvatureDrive,
     ctrl: Controller,
+}
+
+impl Jodio {
+    fn set_intake_command(&self, command: Command) {
+        *self.intake_command.borrow_mut() = command;
+    }
 }
 
 impl Compete for Jodio {
@@ -40,18 +53,41 @@ impl Compete for Jodio {
     }
 
     async fn driver(&mut self) {
-        self.intake.set_active();
+        let mut collecting = false;
         loop {
             let state = self.ctrl.state().unwrap_or_default();
             self.curvature
                 .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
                 .expect("couldn't set drivetrain voltages");
-            // self.dt
-            //     .model
-            //     .drive_arcade(state.left_stick.y(), state.right_stick.x())
-            //     .expect("couldn't set drivetrain voltages");
 
-            self.intake.update().expect("couldn't drive intake");
+            // Priority:
+            // L2 => Score Long
+            // L1 => Score Middle
+            // R2 => Score Lower
+            // R1 => Toggle Collect
+
+            if state.button_l2.is_pressed() {
+                collecting = false;
+                self.set_intake_command(Command::ScoreLong);
+            } else if state.button_l1.is_pressed() {
+                collecting = false;
+                self.set_intake_command(Command::ScoreMiddle);
+            } else if state.button_r2.is_pressed() {
+                collecting = false;
+                self.set_intake_command(Command::ScoreLow);
+            } else if !collecting {
+                self.set_intake_command(Command::Stop);
+            }
+
+            if state.button_r1.is_now_pressed() {
+                collecting = !collecting;
+                if collecting {
+                    self.set_intake_command(Command::Collect);
+                } else {
+                    self.set_intake_command(Command::Stop);
+                }
+            }
+
             sleep(Duration::from_millis(10)).await;
         }
     }
@@ -59,7 +95,7 @@ impl Compete for Jodio {
 
 fn select_allegiance(controller: &Controller) -> Alliance {
     loop {
-        let state = controller.state().expect("couldn't read controller state");
+        let state = controller.state().unwrap_or_default();
         if state.button_right.is_now_pressed() {
             return Alliance::Red;
         } else if state.button_left.is_now_pressed() {
@@ -75,6 +111,16 @@ async fn main(peris: Peripherals) {
     }
 
     let alliance = select_allegiance(&peris.primary_controller);
+
+    let mut intake = Intake::new(
+        Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
+        Motor::new(peris.port_18, Gearset::Blue, Direction::Forward),
+        Motor::new(peris.port_19, Gearset::Blue, Direction::Forward),
+        OpticalSensor::new(peris.port_21),
+        Wing::new(peris.adi_a),
+        alliance,
+    );
+    let intake_command = intake.command();
 
     let jodio = Jodio {
         dt: Drivetrain {
@@ -119,13 +165,13 @@ async fn main(peris: Peripherals) {
             NEGATIVE_INERTIA_SCALAR,
             TURN_SENSITIVITY,
         ),
-        intake: Intake::new(
-            Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
-            Motor::new(peris.port_18, Gearset::Blue, Direction::Forward),
-            Motor::new(peris.port_19, Gearset::Blue, Direction::Forward),
-            OpticalSensor::new(peris.port_21),
-            alliance,
-        ),
+        _intake_task: spawn(async move {
+            loop {
+                let _ = intake.update();
+                sleep(Duration::from_millis(10)).await;
+            }
+        }),
+        intake_command,
         ctrl: peris.primary_controller,
     };
 
