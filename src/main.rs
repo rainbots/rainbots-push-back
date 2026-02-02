@@ -97,7 +97,7 @@ impl SelectCompete for Jodio {
     }
 }
 
-fn select_allegiance(display: &mut Display) -> Alliance {
+async fn select_allegiance(display: &mut Display) -> Alliance {
     display.fill(
         &Rect::new(
             [0, 0],
@@ -127,6 +127,7 @@ fn select_allegiance(display: &mut Display) -> Alliance {
                 Alliance::Blue
             };
         }
+        sleep(Duration::from_millis(10)).await;
     }
 }
 
@@ -136,7 +137,10 @@ async fn main(mut peris: Peripherals) {
         Motor::new(port, Gearset::Blue, Direction::Forward)
     }
 
-    let allegiance = select_allegiance(&mut peris.display);
+    let mut imu = InertialSensor::new(peris.port_13);
+    let _ = imu.calibrate().await;
+
+    let allegiance = select_allegiance(&mut peris.display).await;
 
     let mut intake = Intake::new(
         Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
@@ -177,11 +181,7 @@ async fn main(mut peris: Peripherals) {
                     consts::PERP_WHEEL_OFFSET,
                     None,
                 )],
-                Some({
-                    let mut imu = InertialSensor::new(peris.port_13);
-                    let _ = imu.calibrate().await;
-                    imu
-                }),
+                Some(imu),
             ),
         },
         curvature: CurvatureDrive::new(
