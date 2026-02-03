@@ -25,7 +25,7 @@ pub async fn awp(jodio: &mut Jodio) {
     // drive down to right matchloader and long goal
     basic.drive_distance(&mut jodio.dt, 30.119).await;
     basic.turn_to_heading(&mut jodio.dt, 270.0.deg()).await;
-    // TODO: match loader down
+    jodio.matchloader.extend();
     basic.drive_distance(&mut jodio.dt, 9.583).await;
     // wait for blocks to be collected from loader
     sleep(Duration::from_millis(500)).await; // TODO: placeholder duration
@@ -37,8 +37,9 @@ pub async fn awp(jodio: &mut Jodio) {
 
     // PHASE 2: Middle goal scoring
 
-    // TODO: match loader up
+    jodio.matchloader.retract();
     // face line of blocks
+    // TODO: this needs some more work probably
     basic.turn_to_heading(&mut jodio.dt, 0.0.deg()).await;
     jodio.set_intake_command(Command::Collect);
     // collect blocks
@@ -103,10 +104,10 @@ pub async fn safe(jodio: &mut Jodio, left: bool) {
         .await;
 
     basic.turn_to_heading(&mut jodio.dt, 270.0.deg()).await;
-    // TODO: matchloader down
+    jodio.matchloader.extend();
     basic.drive_distance(&mut jodio.dt, 6.063).await;
 
-    // TODO: matchloader up
+    jodio.matchloader.retract();
     basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, 23.079).await;
     jodio.set_intake_command(Command::ScoreLong);

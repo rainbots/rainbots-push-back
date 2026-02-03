@@ -3,6 +3,7 @@ mod banner;
 mod consts;
 mod curvature;
 mod intake;
+mod matchloader;
 mod wing;
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
@@ -19,6 +20,7 @@ use crate::{
     banner::THEME_RAINBOTS,
     curvature::CurvatureDrive,
     intake::{Command, Intake},
+    matchloader::Matchloader,
     wing::Wing,
 };
 
@@ -34,6 +36,7 @@ struct Jodio {
     intake_command: Rc<RefCell<Command>>,
     curvature: CurvatureDrive,
     distance_sensor: DistanceSensor,
+    matchloader: Matchloader,
     ctrl: Controller,
 }
 
@@ -138,13 +141,13 @@ async fn main(peris: Peripherals) {
                 [TrackingWheel::new(
                     RotationSensor::new(peris.port_11, Direction::Forward),
                     2.75,
-                    0.5,
+                    consts::PARA_WHEEL_OFFSET,
                     None,
                 )],
                 [TrackingWheel::new(
                     RotationSensor::new(peris.port_12, Direction::Forward),
                     2.75,
-                    0.5,
+                    consts::PERP_WHEEL_OFFSET,
                     None,
                 )],
                 Some({
@@ -169,6 +172,7 @@ async fn main(peris: Peripherals) {
         }),
         intake_command,
         distance_sensor: DistanceSensor::new(peris.port_3),
+        matchloader: Matchloader::new(peris.adi_b),
         ctrl: peris.primary_controller,
     };
 

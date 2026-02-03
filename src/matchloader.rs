@@ -1,11 +1,11 @@
 use vexide::{adi::AdiPort, prelude::*, smart::PortError};
 
-pub struct Wing {
+pub struct Matchloader {
     solenoid: AdiDigitalOut,
     extended: bool,
 }
 
-impl Wing {
+impl Matchloader {
     pub fn new(port: AdiPort) -> Self {
         Self {
             solenoid: AdiDigitalOut::new(port),
