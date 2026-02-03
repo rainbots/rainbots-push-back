@@ -1,25 +1,14 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::{cell::RefCell, rc::Rc, time::Instant};
 
 use vexide::{prelude::*, smart::PortError};
 
-use crate::{Alliance, wing::Wing};
-
-const BLOCK_PROXIMITY_THRESHOLD: f64 = 0.5;
-const BLOCK_HUE_TOLERANCE: f64 = 30.0;
-const BLOCK_FILTER_INTERVAL: Duration = Duration::from_millis(250);
-
-const RED_HUE: f64 = 0.0;
-const BLUE_HUE: f64 = -120.0;
+use crate::{Alliance, consts, wing::Wing};
 
 pub fn hue_alliance(raw_hue: f64) -> Option<Alliance> {
     let wrapped_hue = (raw_hue + 180.0).rem_euclid(360.0) - 180.0;
-    if (RED_HUE - wrapped_hue).abs() < BLOCK_HUE_TOLERANCE {
+    if (consts::RED_HUE - wrapped_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
         Some(Alliance::Red)
-    } else if (BLUE_HUE - raw_hue).abs() < BLOCK_HUE_TOLERANCE {
+    } else if (consts::BLUE_HUE - raw_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
         Some(Alliance::Blue)
     } else {
         None
@@ -49,7 +38,7 @@ impl Detection {
     }
 
     fn filter_until(&self) -> Instant {
-        self.time + BLOCK_FILTER_INTERVAL
+        self.time + consts::BLOCK_FILTER_INTERVAL
     }
 }
 
@@ -128,7 +117,7 @@ impl Intake {
             }
         } else {
             let proximity = self.optical.proximity()?;
-            if proximity <= BLOCK_PROXIMITY_THRESHOLD {
+            if proximity <= consts::BLOCK_PROXIMITY_THRESHOLD {
                 let hue = self.optical.hue()?;
                 let block_alliance = hue_alliance(hue);
 
@@ -156,6 +145,7 @@ impl Intake {
         let command = *self.command.borrow();
         match command {
             Command::Stop => {
+                self.close_end()?;
                 self.stage0.set_voltage(0.0)?;
                 self.stage1.set_voltage(0.0)?;
                 self.stage2.set_voltage(0.0)?;

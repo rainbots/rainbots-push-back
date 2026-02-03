@@ -1,5 +1,6 @@
 mod auton;
 mod banner;
+mod consts;
 mod curvature;
 mod intake;
 mod wing;
@@ -21,12 +22,6 @@ use crate::{
     wing::Wing,
 };
 
-const TURN_NONLINEARITY: f64 = 0.65;
-const TURN_SENSITIVITY: f64 = 0.8;
-const DEADZONE: f64 = 4.0 / 100.0;
-const SLEW: f64 = 0.3;
-const NEGATIVE_INERTIA_SCALAR: f64 = 4.0;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Alliance {
     Red,
@@ -38,6 +33,7 @@ struct Jodio {
     _intake_task: Task<()>,
     intake_command: Rc<RefCell<Command>>,
     curvature: CurvatureDrive,
+    distance_sensor: DistanceSensor,
     ctrl: Controller,
 }
 
@@ -159,11 +155,11 @@ async fn main(peris: Peripherals) {
             ),
         },
         curvature: CurvatureDrive::new(
-            TURN_NONLINEARITY,
-            DEADZONE,
-            SLEW,
-            NEGATIVE_INERTIA_SCALAR,
-            TURN_SENSITIVITY,
+            consts::TURN_NONLINEARITY,
+            consts::DEADZONE,
+            consts::SLEW,
+            consts::NEGATIVE_INERTIA_SCALAR,
+            consts::TURN_SENSITIVITY,
         ),
         _intake_task: spawn(async move {
             loop {
@@ -172,6 +168,7 @@ async fn main(peris: Peripherals) {
             }
         }),
         intake_command,
+        distance_sensor: DistanceSensor::new(peris.port_3),
         ctrl: peris.primary_controller,
     };
 
