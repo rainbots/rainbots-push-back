@@ -5,6 +5,8 @@ use vexide::time::sleep;
 
 use crate::{Jodio, consts, intake::Command};
 
+type Point = Vec2<f64>;
+
 pub async fn awp(jodio: &mut Jodio) {
     let mut basic = Basic {
         linear_controller: consts::LINEAR_PID,
@@ -75,7 +77,6 @@ pub async fn safe(jodio: &mut Jodio, _left: bool) {
         timeout: None,
     };
 
-    type Point = Vec2<f64>;
     let point0: Point = (-44.866, -14.0).into();
 
     jodio.dt.tracking.set_position(point0);
@@ -125,4 +126,68 @@ pub async fn right(_jodio: &mut Jodio) {}
 
 pub async fn left(_jodio: &mut Jodio) {}
 
-pub async fn skills(_jodio: &mut Jodio) {}
+pub async fn skills(jodio: &mut Jodio) {
+    let point0: Point = (-61.0, 18.5).into();
+    jodio.dt.tracking.set_position(point0);
+    jodio.dt.tracking.set_heading(90.0.deg());
+
+    let mut basic = Basic {
+        linear_controller: consts::LINEAR_PID,
+        angular_controller: consts::ANGULAR_PID,
+        linear_tolerances: consts::LINEAR_TOLERANCES,
+        angular_tolerances: consts::ANGULAR_TOLERANCES,
+        // TODO: add timeout
+        timeout: None,
+    };
+
+    // collect blocks
+    jodio.set_intake_command(Command::Collect);
+    let point1: Point = (-22.801, 22.432).into();
+    basic
+        .drive_distance_at_heading(&mut jodio.dt, point1.distance(point0), 316.917.deg())
+        .await;
+
+    // score on middle goal
+    basic.turn_to_heading(&mut jodio.dt, 135.427.deg()).await;
+    basic.drive_distance(&mut jodio.dt, -13.92436).await;
+    jodio.set_intake_command(Command::ScoreMiddle);
+    sleep(Duration::from_millis(500)).await; // TODO: placeholder
+
+    // collect loader
+    basic.drive_distance(&mut jodio.dt, -34.7969).await;
+
+    basic.turn_to_heading(&mut jodio.dt, 316.918.deg()).await;
+    jodio.matchloader.extend();
+    basic.drive_distance(&mut jodio.dt, 7.793).await;
+    sleep(consts::MATCHLOADER_CLEAR_TIME).await;
+    jodio.matchloader.retract();
+
+    // score on long goal
+    basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
+    basic.drive_distance(&mut jodio.dt, -23.95).await;
+    jodio.set_intake_command(Command::ScoreLong);
+    sleep(Duration::from_millis(1000)).await;
+    jodio.set_intake_command(Command::Collect);
+
+    // go to blue side
+    basic.drive_distance(&mut jodio.dt, 8.175).await;
+    basic.turn_to_heading(&mut jodio.dt, 0.0.deg()).await;
+    basic.drive_distance(&mut jodio.dt, 9.918).await;
+    basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
+    basic.drive_distance(&mut jodio.dt, 84.92).await;
+
+    // collect loader
+    basic.turn_to_heading(&mut jodio.dt, 180.0.deg()).await;
+    basic.drive_distance(&mut jodio.dt, 9.918).await;
+    basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
+    jodio.matchloader.extend();
+    basic.drive_distance(&mut jodio.dt, 10.68).await;
+    sleep(consts::MATCHLOADER_CLEAR_TIME).await;
+    jodio.matchloader.retract();
+
+    // score on long goal
+    basic.drive_distance(&mut jodio.dt, 25.053).await;
+    jodio.set_intake_command(Command::ScoreLong);
+    sleep(Duration::from_millis(1000)).await;
+    jodio.set_intake_command(Command::Collect);
+}

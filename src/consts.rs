@@ -40,3 +40,6 @@ pub const BLOCK_FILTER_INTERVAL: Duration = Duration::from_millis(250);
 
 pub const RED_HUE: f64 = 0.0;
 pub const BLUE_HUE: f64 = -120.0;
+
+pub const MATCHLOADER_CLEAR_TIME: Duration = Duration::from_millis(500);
+pub const HALF_MATCHLOADER_CLEAR_TIME: Duration = Duration::from_millis(500);
