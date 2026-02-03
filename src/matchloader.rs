@@ -1,4 +1,5 @@
-use vexide::{adi::AdiPort, prelude::*, smart::PortError};
+use log::error;
+use vexide::{adi::AdiPort, prelude::*};
 
 pub struct Matchloader {
     solenoid: AdiDigitalOut,
@@ -13,19 +14,21 @@ impl Matchloader {
         }
     }
 
-    pub fn extend(&mut self) -> Result<(), PortError> {
+    pub fn extend(&mut self) {
         if !self.extended {
-            self.solenoid.set_high()?;
+            self.solenoid
+                .set_high()
+                .unwrap_or_else(|e| error!("couldn't extend matchloader: {e}"));
             self.extended = true;
         }
-        Ok(())
     }
 
-    pub fn retract(&mut self) -> Result<(), PortError> {
+    pub fn retract(&mut self) {
         if self.extended {
-            self.solenoid.set_low()?;
+            self.solenoid
+                .set_low()
+                .unwrap_or_else(|e| error!("couldn't retract matchloader: {e}"));
             self.extended = false;
         }
-        Ok(())
     }
 }

@@ -3,6 +3,7 @@ mod banner;
 mod consts;
 mod curvature;
 mod intake;
+mod logger;
 mod matchloader;
 mod wing;
 
@@ -14,12 +15,14 @@ use evian::{
     prelude::*,
     tracking::wheeled::{TrackingWheel, WheeledTracking},
 };
+use log::{LevelFilter, warn};
 use vexide::{prelude::*, smart::SmartPort, task::Task};
 
 use crate::{
     banner::THEME_RAINBOTS,
     curvature::CurvatureDrive,
     intake::{Command, Intake},
+    logger::RobotLogger,
     matchloader::Matchloader,
     wing::Wing,
 };
@@ -57,7 +60,7 @@ impl Compete for Jodio {
             let state = self.ctrl.state().unwrap_or_default();
             self.curvature
                 .update(&mut self.dt, state.left_stick.y(), state.right_stick.x())
-                .expect("couldn't set drivetrain voltages");
+                .unwrap_or_else(|e| warn!("couldn't drive drivetrain: {e}"));
 
             // Priority:
             // L2 => Score Long
@@ -105,6 +108,8 @@ fn select_allegiance(controller: &Controller) -> Alliance {
 
 #[vexide::main(banner(theme = THEME_RAINBOTS))]
 async fn main(peris: Peripherals) {
+    RobotLogger.init(LevelFilter::max()).unwrap();
+
     fn motor(port: SmartPort) -> Motor {
         Motor::new(port, Gearset::Blue, Direction::Forward)
     }
@@ -175,6 +180,14 @@ async fn main(peris: Peripherals) {
         matchloader: Matchloader::new(peris.adi_b),
         ctrl: peris.primary_controller,
     };
+
+    // temporary
+    std::hint::black_box((
+        auton::awp,
+        auton::left_safe,
+        auton::right_safe,
+        auton::skills,
+    ));
 
     jodio.compete().await;
 }

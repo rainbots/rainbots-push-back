@@ -13,6 +13,7 @@ icon = "cool-x"
 compress = true
 
 [dependencies]
+log = "0.4.29"
 vexide = { version = "0.8.0", features = ["full", "default-sdk"] }
 
 [dependencies.evian]

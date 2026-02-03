@@ -65,7 +65,7 @@ pub async fn awp(jodio: &mut Jodio) {
 }
 
 // TODO: refactor to work for left
-pub async fn safe(jodio: &mut Jodio, left: bool) {
+pub async fn safe(jodio: &mut Jodio, _left: bool) {
     let mut basic = Basic {
         linear_controller: consts::LINEAR_PID,
         angular_controller: consts::ANGULAR_PID,
@@ -121,7 +121,7 @@ pub async fn left_safe(jodio: &mut Jodio) {
     safe(jodio, true).await;
 }
 
-pub async fn skills(jodio: &mut Jodio) {}
+pub async fn skills(_jodio: &mut Jodio) {}
 
 pub async fn auton(jodio: &mut Jodio) {
     loop {
