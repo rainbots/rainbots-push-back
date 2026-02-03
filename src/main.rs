@@ -9,6 +9,7 @@ mod wing;
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
+use autons::{prelude::*, route, simple::SimpleSelect};
 use evian::{
     drivetrain::model::Differential,
     math::Angle,
@@ -16,7 +17,12 @@ use evian::{
     tracking::wheeled::{TrackingWheel, WheeledTracking},
 };
 use log::{LevelFilter, warn};
-use vexide::{prelude::*, smart::SmartPort, task::Task};
+use vexide::{
+    display::{Rect, TouchState},
+    prelude::*,
+    smart::SmartPort,
+    task::Task,
+};
 
 use crate::{
     banner::THEME_RAINBOTS,
@@ -49,11 +55,7 @@ impl Jodio {
     }
 }
 
-impl Compete for Jodio {
-    async fn autonomous(&mut self) {
-        auton::auton(self).await;
-    }
-
+impl SelectCompete for Jodio {
     async fn driver(&mut self) {
         let mut collecting = false;
         loop {
@@ -95,26 +97,46 @@ impl Compete for Jodio {
     }
 }
 
-fn select_allegiance(controller: &Controller) -> Alliance {
+fn select_allegiance(display: &mut Display) -> Alliance {
+    display.fill(
+        &Rect::new(
+            [0, 0],
+            [
+                Display::HORIZONTAL_RESOLUTION / 2,
+                Display::VERTICAL_RESOLUTION,
+            ],
+        ),
+        (255, 0, 0),
+    );
+
+    display.fill(
+        &Rect::new(
+            [Display::HORIZONTAL_RESOLUTION / 2, 0],
+            [Display::HORIZONTAL_RESOLUTION, Display::VERTICAL_RESOLUTION],
+        ),
+        (0, 0, 255),
+    );
+
     loop {
-        let state = controller.state().unwrap_or_default();
-        if state.button_right.is_now_pressed() {
-            return Alliance::Red;
-        } else if state.button_left.is_now_pressed() {
-            return Alliance::Blue;
+        let touch = display.touch_status();
+        if touch.state == TouchState::Pressed {
+            display.erase((0, 0, 0));
+            return if touch.point.x < Display::HORIZONTAL_RESOLUTION / 2 {
+                Alliance::Red
+            } else {
+                Alliance::Blue
+            };
         }
     }
 }
 
 #[vexide::main(banner(theme = THEME_RAINBOTS))]
-async fn main(peris: Peripherals) {
-    RobotLogger.init(LevelFilter::max()).unwrap();
-
+async fn main(mut peris: Peripherals) {
     fn motor(port: SmartPort) -> Motor {
         Motor::new(port, Gearset::Blue, Direction::Forward)
     }
 
-    let alliance = select_allegiance(&peris.primary_controller);
+    let allegiance = select_allegiance(&mut peris.display);
 
     let mut intake = Intake::new(
         Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
@@ -122,7 +144,7 @@ async fn main(peris: Peripherals) {
         Motor::new(peris.port_19, Gearset::Blue, Direction::Forward),
         OpticalSensor::new(peris.port_21),
         Wing::new(peris.adi_a),
-        alliance,
+        allegiance,
     );
     let intake_command = intake.command();
 
@@ -181,13 +203,10 @@ async fn main(peris: Peripherals) {
         ctrl: peris.primary_controller,
     };
 
-    // temporary
-    std::hint::black_box((
-        auton::awp,
-        auton::left_safe,
-        auton::right_safe,
-        auton::skills,
-    ));
-
-    jodio.compete().await;
+    jodio
+        .compete(SimpleSelect::new(
+            peris.display,
+            [route!("Spin", auton::auton)],
+        ))
+        .await;
 }
