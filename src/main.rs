@@ -47,6 +47,7 @@ struct Jodio {
     distance_sensor: DistanceSensor,
     matchloader: Matchloader,
     ctrl: Controller,
+    _allegiance: Alliance,
 }
 
 impl Jodio {
@@ -201,12 +202,17 @@ async fn main(mut peris: Peripherals) {
         distance_sensor: DistanceSensor::new(peris.port_3),
         matchloader: Matchloader::new(peris.adi_b),
         ctrl: peris.primary_controller,
+        _allegiance: allegiance,
     };
 
     jodio
         .compete(SimpleSelect::new(
             peris.display,
-            [route!("Spin", auton::auton)],
+            [
+                route!("Right", auton::right),
+                route!("Left", auton::left),
+                route!("Skills", auton::skills),
+            ],
         ))
         .await;
 }
