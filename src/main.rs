@@ -44,7 +44,6 @@ struct Jodio {
     _intake_task: Task<()>,
     intake_command: CommandCell,
     curvature: CurvatureDrive,
-    distance_sensor: DistanceSensor,
     matchloader: Matchloader,
     ctrl: Controller,
     _allegiance: Alliance,
@@ -128,7 +127,7 @@ async fn select_allegiance(display: &mut Display) -> Alliance {
 
 #[vexide::main(banner(theme = THEME_RAINBOTS))]
 async fn main(mut peris: Peripherals) {
-    RobotLogger.init(LevelFilter::max());
+    RobotLogger.init(LevelFilter::max()).unwrap();
 
     fn motor(port: SmartPort) -> Motor {
         Motor::new(port, Gearset::Blue, Direction::Forward)
@@ -195,7 +194,6 @@ async fn main(mut peris: Peripherals) {
             }
         }),
         intake_command,
-        distance_sensor: DistanceSensor::new(peris.port_3),
         matchloader: Matchloader::new(peris.adi_b),
         ctrl: peris.primary_controller,
         _allegiance: allegiance,
