@@ -22,7 +22,7 @@ pub async fn awp(jodio: &mut Jodio) {
 
     // PHASE 1: Long goal scoring
 
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
 
     // drive down to right matchloader and long goal
     basic.drive_distance(&mut jodio.dt, 30.119).await;
@@ -34,7 +34,7 @@ pub async fn awp(jodio: &mut Jodio) {
 
     // drive to long goal
     basic.drive_distance(&mut jodio.dt, -23.861).await;
-    jodio.set_intake_command(Command::ScoreLong);
+    jodio.intake_command.set(Command::ScoreLong);
     sleep(Duration::from_millis(500)).await; // TODO: placeholder duration
 
     // PHASE 2: Middle goal scoring
@@ -43,16 +43,16 @@ pub async fn awp(jodio: &mut Jodio) {
     // face line of blocks
     // TODO: this needs some more work probably
     basic.turn_to_heading(&mut jodio.dt, 0.0.deg()).await;
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
     // collect blocks
     basic.drive_distance(&mut jodio.dt, 66.301).await;
     // face middle goal
     basic.turn_to_heading(&mut jodio.dt, 315.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, -15.55).await;
-    jodio.set_intake_command(Command::ScoreMiddle);
+    jodio.intake_command.set(Command::ScoreMiddle);
     // don't score too many blocks
     sleep(Duration::from_millis(250)).await; // TODO: placeholder duration
-    jodio.set_intake_command(Command::Stop);
+    jodio.intake_command.set(Command::Stop);
 
     // PHASE 3: Left long  goal scoring
 
@@ -60,7 +60,7 @@ pub async fn awp(jodio: &mut Jodio) {
     basic.drive_distance(&mut jodio.dt, -45.52).await;
     basic.turn_to_heading(&mut jodio.dt, 270.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, -12.712).await;
-    jodio.set_intake_command(Command::ScoreLong);
+    jodio.intake_command.set(Command::ScoreLong);
     loop {
         sleep(Duration::from_millis(10)).await;
     }
@@ -82,7 +82,7 @@ pub async fn safe(jodio: &mut Jodio, _left: bool) {
     jodio.dt.tracking.set_position(point0);
     jodio.dt.tracking.set_heading(90.0.deg());
 
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
     let point1: Point = (-22.374, -21.827).into();
 
     basic.turn_to_point(&mut jodio.dt, point1).await;
@@ -95,9 +95,9 @@ pub async fn safe(jodio: &mut Jodio, _left: bool) {
     basic
         .drive_distance(&mut jodio.dt, point2.distance(point1))
         .await;
-    jodio.set_intake_command(Command::ScoreLow);
+    jodio.intake_command.set(Command::ScoreLow);
     sleep(Duration::from_millis(500)).await; // TODO: placeholder duration
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
 
     let point3: Point = (-47.213, -47.056).into();
     basic
@@ -111,7 +111,7 @@ pub async fn safe(jodio: &mut Jodio, _left: bool) {
     jodio.matchloader.retract();
     basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, 23.079).await;
-    jodio.set_intake_command(Command::ScoreLong);
+    jodio.intake_command.set(Command::ScoreLong);
 }
 
 pub async fn right_safe(jodio: &mut Jodio) {
@@ -141,7 +141,7 @@ pub async fn skills(jodio: &mut Jodio) {
     };
 
     // collect blocks
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
     let point1: Point = (-22.801, 22.432).into();
     basic
         .drive_distance_at_heading(&mut jodio.dt, point1.distance(point0), 316.917.deg())
@@ -150,7 +150,7 @@ pub async fn skills(jodio: &mut Jodio) {
     // score on middle goal
     basic.turn_to_heading(&mut jodio.dt, 135.427.deg()).await;
     basic.drive_distance(&mut jodio.dt, -13.92436).await;
-    jodio.set_intake_command(Command::ScoreMiddle);
+    jodio.intake_command.set(Command::ScoreMiddle);
     sleep(Duration::from_millis(500)).await; // TODO: placeholder
 
     // collect loader
@@ -165,9 +165,9 @@ pub async fn skills(jodio: &mut Jodio) {
     // score on long goal
     basic.turn_to_heading(&mut jodio.dt, 90.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, -23.95).await;
-    jodio.set_intake_command(Command::ScoreLong);
+    jodio.intake_command.set(Command::ScoreLong);
     sleep(Duration::from_millis(1000)).await;
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
 
     // go to blue side
     basic.drive_distance(&mut jodio.dt, 8.175).await;
@@ -187,7 +187,7 @@ pub async fn skills(jodio: &mut Jodio) {
 
     // score on long goal
     basic.drive_distance(&mut jodio.dt, 25.053).await;
-    jodio.set_intake_command(Command::ScoreLong);
+    jodio.intake_command.set(Command::ScoreLong);
     sleep(Duration::from_millis(1000)).await;
-    jodio.set_intake_command(Command::Collect);
+    jodio.intake_command.set(Command::Collect);
 }

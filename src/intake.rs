@@ -1,20 +1,9 @@
-use std::{cell::RefCell, f64, rc::Rc, time::Instant};
+use std::{cell::Cell, f64, rc::Rc, time::Instant};
 
 use log::{error, info, trace, warn};
 use vexide::{prelude::*, smart::PortError};
 
 use crate::{Alliance, consts, wing::Wing};
-
-pub fn hue_alliance(raw_hue: f64) -> Option<Alliance> {
-    let wrapped_hue = (raw_hue + 180.0).rem_euclid(360.0) - 180.0;
-    if (consts::RED_HUE - wrapped_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
-        Some(Alliance::Red)
-    } else if (consts::BLUE_HUE - raw_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
-        Some(Alliance::Blue)
-    } else {
-        None
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Command {
@@ -24,6 +13,19 @@ pub enum Command {
     ScoreLow,
     #[default]
     Stop,
+}
+
+pub type CommandCell = Rc<Cell<Command>>;
+
+fn hue_alliance(raw_hue: f64) -> Option<Alliance> {
+    let wrapped_hue = (raw_hue + 180.0).rem_euclid(360.0) - 180.0;
+    if (consts::RED_HUE - wrapped_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
+        Some(Alliance::Red)
+    } else if (consts::BLUE_HUE - raw_hue).abs() < consts::BLOCK_HUE_TOLERANCE {
+        Some(Alliance::Blue)
+    } else {
+        None
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -51,7 +53,7 @@ pub struct Intake {
     wing: Wing,
 
     allegiance: Alliance,
-    command: Rc<RefCell<Command>>,
+    command: Rc<Cell<Command>>,
     detection: Option<Detection>,
 }
 
@@ -71,12 +73,12 @@ impl Intake {
             optical,
             wing,
             allegiance,
-            command: Rc::new(RefCell::new(Command::Stop)),
+            command: Rc::new(Cell::new(Command::Stop)),
             detection: None,
         }
     }
 
-    pub fn command(&self) -> Rc<RefCell<Command>> {
+    pub fn command(&self) -> CommandCell {
         Rc::clone(&self.command)
     }
 
@@ -172,8 +174,7 @@ impl Intake {
     }
 
     pub fn update(&mut self) -> Result<(), PortError> {
-        let command = *self.command.borrow();
-        match command {
+        match self.command.get() {
             Command::Stop => {
                 self.close_end();
                 self.stage0.set_voltage(0.0)?;

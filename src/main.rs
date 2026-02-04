@@ -7,7 +7,7 @@ mod logger;
 mod matchloader;
 mod wing;
 
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::time::Duration;
 
 use autons::{prelude::*, route, simple::SimpleSelect};
 use evian::{
@@ -27,7 +27,7 @@ use vexide::{
 use crate::{
     banner::THEME_RAINBOTS,
     curvature::CurvatureDrive,
-    intake::{Command, Intake},
+    intake::{Command, CommandCell, Intake},
     logger::RobotLogger,
     matchloader::Matchloader,
     wing::Wing,
@@ -42,18 +42,12 @@ enum Alliance {
 struct Jodio {
     dt: Drivetrain<Differential, WheeledTracking>,
     _intake_task: Task<()>,
-    intake_command: Rc<RefCell<Command>>,
+    intake_command: CommandCell,
     curvature: CurvatureDrive,
     distance_sensor: DistanceSensor,
     matchloader: Matchloader,
     ctrl: Controller,
     _allegiance: Alliance,
-}
-
-impl Jodio {
-    fn set_intake_command(&self, command: Command) {
-        *self.intake_command.borrow_mut() = command;
-    }
 }
 
 impl SelectCompete for Jodio {
@@ -73,23 +67,23 @@ impl SelectCompete for Jodio {
 
             if state.button_l2.is_pressed() {
                 collecting = false;
-                self.set_intake_command(Command::ScoreLong);
+                self.intake_command.set(Command::ScoreLong);
             } else if state.button_l1.is_pressed() {
                 collecting = false;
-                self.set_intake_command(Command::ScoreMiddle);
+                self.intake_command.set(Command::ScoreMiddle);
             } else if state.button_r2.is_pressed() {
                 collecting = false;
-                self.set_intake_command(Command::ScoreLow);
+                self.intake_command.set(Command::ScoreLow);
             } else if !collecting {
-                self.set_intake_command(Command::Stop);
+                self.intake_command.set(Command::Stop);
             }
 
             if state.button_r1.is_now_pressed() {
                 collecting = !collecting;
                 if collecting {
-                    self.set_intake_command(Command::Collect);
+                    self.intake_command.set(Command::Collect);
                 } else {
-                    self.set_intake_command(Command::Stop);
+                    self.intake_command.set(Command::Stop);
                 }
             }
 
@@ -134,6 +128,8 @@ async fn select_allegiance(display: &mut Display) -> Alliance {
 
 #[vexide::main(banner(theme = THEME_RAINBOTS))]
 async fn main(mut peris: Peripherals) {
+    RobotLogger.init(LevelFilter::max());
+
     fn motor(port: SmartPort) -> Motor {
         Motor::new(port, Gearset::Blue, Direction::Forward)
     }
