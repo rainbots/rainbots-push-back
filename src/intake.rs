@@ -55,6 +55,7 @@ pub struct Intake {
     allegiance: Alliance,
     command: Rc<Cell<Command>>,
     detection: Option<Detection>,
+    reverse_until: Option<Instant>,
 }
 
 impl Intake {
@@ -75,6 +76,7 @@ impl Intake {
             allegiance,
             command: Rc::new(Cell::new(Command::Stop)),
             detection: None,
+            reverse_until: None,
         }
     }
 
@@ -123,15 +125,22 @@ impl Intake {
         on_detected: impl FnOnce(&mut Self),
         on_detection_end: impl FnOnce(&mut Self),
     ) {
+        // if something has already been detected
         if let Some(detection) = self.detection {
+            // if the filter interval has not already passed
             if detection.filter_until() > Instant::now() {
+                // call filter code
                 on_detected(self);
             } else {
+                // if the filter interval has passed, invalidate the detection and call end code
                 self.detection = None;
-                info!("detected block");
+                info!("filter has ended");
                 on_detection_end(self);
             }
         } else {
+            // if something has not been detected:
+
+            // check if something is in the intake
             let proximity = match self.optical.proximity() {
                 Ok(p) => p,
                 Err(e) => {
@@ -140,10 +149,14 @@ impl Intake {
                 }
             };
 
+            // if there is not, return
             if proximity > consts::BLOCK_PROXIMITY_THRESHOLD {
                 return;
             }
 
+            info!("detected object in intake");
+
+            // there is, check its hue
             let hue = match self.optical.hue() {
                 Ok(h) => h,
                 Err(e) => {
@@ -152,12 +165,19 @@ impl Intake {
                 }
             };
 
+            info!("object has hue {hue}");
+
+            // try to match the hue with an alliance
             let block_alliance = hue_alliance(hue);
 
+            // if the hue was matched and it's the opposite alliance
             if let Some(block_alliance) = block_alliance
                 && block_alliance != self.allegiance
             {
+                // validate detection
                 self.detection = Some(Detection::now());
+                // call filter code
+                info!("detected block, filtering now");
                 on_detected(self);
             }
         }
@@ -173,8 +193,21 @@ impl Intake {
         self.wing.extend();
     }
 
+    fn should_reverse(&mut self) -> bool {
+        let now = Instant::now();
+
+        now < *self
+            .reverse_until
+            .get_or_insert(now + consts::REVERSE_INTERVAL)
+    }
+
     pub fn update(&mut self) -> Result<(), PortError> {
-        match self.command.get() {
+        let command = self.command.get();
+        if !matches!(command, Command::ScoreMiddle | Command::ScoreLong) {
+            self.reverse_until = None;
+        }
+
+        match command {
             Command::Stop => {
                 self.close_end();
                 self.stage0.set_voltage(0.0)?;
@@ -189,6 +222,7 @@ impl Intake {
                 self.stage2_upper();
             }
             Command::ScoreLow => {
+                self.close_end();
                 self.stage0_out();
                 self.stage1_out();
                 // might cause middle scoring if blocks are present at the end of the intake
@@ -198,29 +232,39 @@ impl Intake {
                 // so bad blocks can be thrown out
                 self.open_end();
 
-                self.handle_detection(
-                    // bad block detected, redirect to upper
-                    Self::stage2_upper,
-                    // bad block is out, go back to lower
-                    Self::stage2_lower,
-                );
+                if self.should_reverse() {
+                    self.stage1_out();
+                    self.stage2_lower();
+                } else {
+                    self.handle_detection(
+                        // bad block detected, redirect to upper
+                        Self::stage2_upper,
+                        // bad block is out, go back to lower
+                        Self::stage2_lower,
+                    );
+                    self.stage1_in();
+                }
 
                 self.stage0_in();
-                self.stage1_in();
             }
             Command::ScoreLong => {
-                // so bad blocks can be thrown out
+                // so good blocks can be scored
                 self.open_end();
 
-                self.handle_detection(
-                    // bad block detected, redirect to lower
-                    Self::stage2_lower,
-                    // bad block is out, go back to upper
-                    Self::stage2_upper,
-                );
+                if self.should_reverse() {
+                    self.stage1_out();
+                    self.stage2_lower();
+                } else {
+                    self.handle_detection(
+                        // bad block detected, redirect to lower
+                        Self::stage2_lower,
+                        // bad block is out, go back to upper
+                        Self::stage2_upper,
+                    );
+                    self.stage1_in();
+                }
 
                 self.stage0_in();
-                self.stage1_in();
             }
         };
 

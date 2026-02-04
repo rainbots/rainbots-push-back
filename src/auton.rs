@@ -61,9 +61,6 @@ pub async fn awp(jodio: &mut Jodio) {
     basic.turn_to_heading(&mut jodio.dt, 270.0.deg()).await;
     basic.drive_distance(&mut jodio.dt, -12.712).await;
     jodio.intake_command.set(Command::ScoreLong);
-    loop {
-        sleep(Duration::from_millis(10)).await;
-    }
 }
 
 // TODO: refactor to work for left

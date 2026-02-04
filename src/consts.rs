@@ -37,6 +37,7 @@ pub const DISTANCE_SENSOR_OFFSET: f64 = 0.5;
 pub const BLOCK_PROXIMITY_THRESHOLD: f64 = 0.5;
 pub const BLOCK_HUE_TOLERANCE: f64 = 30.0;
 pub const BLOCK_FILTER_INTERVAL: Duration = Duration::from_millis(250);
+pub const REVERSE_INTERVAL: Duration = Duration::from_millis(250);
 
 pub const RED_HUE: f64 = 0.0;
 pub const BLUE_HUE: f64 = -120.0;
