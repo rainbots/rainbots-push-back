@@ -203,8 +203,9 @@ async fn main(mut peris: Peripherals) {
         .compete(SimpleSelect::new(
             peris.display,
             [
-                route!("Right", auton::right),
-                route!("Left", auton::left),
+                route!("Right Safe", auton::right_safe),
+                route!("Left Safe", auton::left_safe),
+                route!("Right AWP", auton::awp),
                 route!("Skills", auton::skills),
             ],
         ))

@@ -119,10 +119,6 @@ pub async fn left_safe(jodio: &mut Jodio) {
     safe(jodio, true).await;
 }
 
-pub async fn right(_jodio: &mut Jodio) {}
-
-pub async fn left(_jodio: &mut Jodio) {}
-
 pub async fn skills(jodio: &mut Jodio) {
     let point0: Point = (-61.0, 18.5).into();
     jodio.dt.tracking.set_position(point0);
