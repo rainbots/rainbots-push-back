@@ -7,7 +7,7 @@ mod logger;
 mod matchloader;
 mod wing;
 
-use std::time::Duration;
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use autons::{prelude::*, route, simple::SimpleSelect};
 use evian::{
@@ -46,7 +46,7 @@ struct Jodio {
     curvature: CurvatureDrive,
     matchloader: Matchloader,
     ctrl: Controller,
-    _allegiance: Alliance,
+    allegiance: Rc<Cell<Option<Alliance>>>,
 }
 
 impl SelectCompete for Jodio {
@@ -136,7 +136,7 @@ async fn main(mut peris: Peripherals) {
     let mut imu = InertialSensor::new(peris.port_13);
     let _ = imu.calibrate().await;
 
-    let allegiance = select_allegiance(&mut peris.display).await;
+    let allegiance = Rc::new(Cell::new(Some(select_allegiance(&mut peris.display).await)));
 
     let mut intake = Intake::new(
         Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
@@ -144,7 +144,7 @@ async fn main(mut peris: Peripherals) {
         Motor::new(peris.port_19, Gearset::Blue, Direction::Forward),
         OpticalSensor::new(peris.port_21),
         Wing::new(peris.adi_a),
-        allegiance,
+        Rc::clone(&allegiance),
     );
     let intake_command = intake.command();
 
@@ -196,7 +196,7 @@ async fn main(mut peris: Peripherals) {
         intake_command,
         matchloader: Matchloader::new(peris.adi_b),
         ctrl: peris.primary_controller,
-        _allegiance: allegiance,
+        allegiance,
     };
 
     jodio

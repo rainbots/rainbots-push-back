@@ -52,9 +52,9 @@ pub struct Intake {
     optical: OpticalSensor,
     wing: Wing,
 
-    allegiance: Alliance,
     command: Rc<Cell<Command>>,
     detection: Option<Detection>,
+    allegiance: Rc<Cell<Option<Alliance>>>,
     reverse_until: Option<Instant>,
 }
 
@@ -65,7 +65,7 @@ impl Intake {
         stage2: Motor,
         optical: OpticalSensor,
         wing: Wing,
-        allegiance: Alliance,
+        allegiance: Rc<Cell<Option<Alliance>>>,
     ) -> Self {
         Self {
             stage0,
@@ -73,9 +73,9 @@ impl Intake {
             stage2,
             optical,
             wing,
-            allegiance,
             command: Rc::new(Cell::new(Command::Stop)),
             detection: None,
+            allegiance,
             reverse_until: None,
         }
     }
@@ -125,6 +125,18 @@ impl Intake {
         on_detected: impl FnOnce(&mut Self),
         on_detection_end: impl FnOnce(&mut Self),
     ) {
+        // check if color sorting is enabled
+        let allegiance = match self.allegiance.get() {
+            // if it is, continue to the rest of the function
+            Some(a) => a,
+            // if it is not:
+            None => {
+                // just run post-filter code and return
+                on_detection_end(self);
+                return;
+            }
+        };
+
         // if something has already been detected
         if let Some(detection) = self.detection {
             // if the filter interval has not already passed
@@ -172,7 +184,7 @@ impl Intake {
 
             // if the hue was matched and it's the opposite alliance
             if let Some(block_alliance) = block_alliance
-                && block_alliance != self.allegiance
+                && block_alliance != allegiance
             {
                 // validate detection
                 self.detection = Some(Detection::now());

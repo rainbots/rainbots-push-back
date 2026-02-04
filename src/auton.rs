@@ -120,6 +120,9 @@ pub async fn left_safe(jodio: &mut Jodio) {
 }
 
 pub async fn skills(jodio: &mut Jodio) {
+    // disable color sorting
+    jodio.allegiance.set(None);
+
     let point0: Point = (-61.0, 18.5).into();
     jodio.dt.tracking.set_position(point0);
     jodio.dt.tracking.set_heading(90.0.deg());
