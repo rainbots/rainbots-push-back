@@ -14,7 +14,10 @@ use evian::{
     drivetrain::model::Differential,
     math::Angle,
     prelude::*,
-    tracking::wheeled::{TrackingWheel, WheeledTracking},
+    tracking::{
+        shared_motors,
+        wheeled::{TrackingWheel, WheeledTracking},
+    },
 };
 use log::{LevelFilter, warn};
 use vexide::{
@@ -30,7 +33,6 @@ use crate::{
     intake::{Command, CommandCell, Intake},
     logger::RobotLogger,
     matchloader::Matchloader,
-    wing::Wing,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,55 +131,35 @@ async fn select_allegiance(display: &mut Display) -> Alliance {
 async fn main(mut peris: Peripherals) {
     RobotLogger.init(LevelFilter::max()).unwrap();
 
-    fn motor(port: SmartPort) -> Motor {
-        Motor::new(port, Gearset::Blue, Direction::Forward)
-    }
-
-    let mut imu = InertialSensor::new(peris.port_13);
-    let _ = imu.calibrate().await;
-
     let allegiance = Rc::new(Cell::new(Some(select_allegiance(&mut peris.display).await)));
+    allegiance.set(None);
 
     let mut intake = Intake::new(
-        Motor::new(peris.port_17, Gearset::Blue, Direction::Forward),
-        Motor::new(peris.port_18, Gearset::Blue, Direction::Forward),
-        Motor::new(peris.port_19, Gearset::Blue, Direction::Forward),
+        Motor::new(peris.port_2, Gearset::Blue, Direction::Forward),
+        Motor::new_exp(peris.port_1, Direction::Reverse),
+        Motor::new_exp(peris.port_11, Direction::Forward),
         OpticalSensor::new(peris.port_21),
-        Wing::new(peris.adi_a),
         Rc::clone(&allegiance),
     );
     let intake_command = intake.command();
 
+    let left_motors = shared_motors![Motor::new(peris.port_3, Gearset::Green, Direction::Reverse),];
+    let right_motors =
+        shared_motors![Motor::new(peris.port_4, Gearset::Green, Direction::Reverse),];
     let jodio = Jodio {
         dt: Drivetrain {
-            model: Differential::new(
-                [
-                    motor(peris.port_8),
-                    motor(peris.port_2),
-                    motor(peris.port_1),
-                ],
-                [
-                    motor(peris.port_20),
-                    motor(peris.port_15),
-                    motor(peris.port_14),
-                ],
-            ),
-            tracking: WheeledTracking::new(
+            model: Differential::new([], []),
+            tracking: WheeledTracking::forward_only(
                 (0.0, 0.0),
                 Angle::from_radians(0.0),
-                [TrackingWheel::new(
-                    RotationSensor::new(peris.port_11, Direction::Forward),
-                    2.75,
-                    consts::PARA_WHEEL_OFFSET,
-                    None,
-                )],
-                [TrackingWheel::new(
-                    RotationSensor::new(peris.port_12, Direction::Forward),
-                    2.75,
-                    consts::PERP_WHEEL_OFFSET,
-                    None,
-                )],
-                Some(imu),
+                [
+                    TrackingWheel::new(left_motors.clone(), 3.25, 0.0, Some(36.0 / 48.0)),
+                    TrackingWheel::new(right_motors.clone(), 3.25, 0.0, Some(36.0 / 48.0)),
+                ],
+                {
+                    let a: Option<InertialSensor> = None;
+                    a
+                },
             ),
         },
         curvature: CurvatureDrive::new(

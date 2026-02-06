@@ -1,7 +1,10 @@
 use std::{cell::Cell, f64, rc::Rc, time::Instant};
 
-use log::{error, info, trace, warn};
-use vexide::{prelude::*, smart::PortError};
+use log::{error, info, warn};
+use vexide::{
+    prelude::*,
+    smart::{PortError, motor::BrakeMode},
+};
 
 use crate::{Alliance, consts, wing::Wing};
 
@@ -50,7 +53,6 @@ pub struct Intake {
     stage1: Motor,
     stage2: Motor,
     optical: OpticalSensor,
-    wing: Wing,
 
     command: Rc<Cell<Command>>,
     detection: Option<Detection>,
@@ -64,7 +66,6 @@ impl Intake {
         stage1: Motor,
         stage2: Motor,
         optical: OpticalSensor,
-        wing: Wing,
         allegiance: Rc<Cell<Option<Alliance>>>,
     ) -> Self {
         Self {
@@ -72,7 +73,6 @@ impl Intake {
             stage1,
             stage2,
             optical,
-            wing,
             command: Rc::new(Cell::new(Command::Stop)),
             detection: None,
             allegiance,
@@ -117,6 +117,12 @@ impl Intake {
     fn stage2_lower(&mut self) {
         self.stage0
             .set_voltage(-12.0)
+            .unwrap_or_else(|e| error!("couldn't drive stage2 {e}"));
+    }
+
+    fn stage2_hold(&mut self) {
+        self.stage0
+            .brake(BrakeMode::Hold)
             .unwrap_or_else(|e| error!("couldn't drive stage2 {e}"));
     }
 
@@ -195,16 +201,6 @@ impl Intake {
         }
     }
 
-    fn open_end(&mut self) {
-        trace!("opening intake end");
-        self.wing.retract();
-    }
-
-    fn close_end(&mut self) {
-        trace!("closing intake end");
-        self.wing.extend();
-    }
-
     fn should_reverse(&mut self) -> bool {
         let now = Instant::now();
 
@@ -221,60 +217,55 @@ impl Intake {
 
         match command {
             Command::Stop => {
-                self.close_end();
                 self.stage0.set_voltage(0.0)?;
                 self.stage1.set_voltage(0.0)?;
                 self.stage2.set_voltage(0.0)?;
             }
             Command::Collect => {
-                self.close_end();
                 self.stage0_in();
                 self.stage1_in();
                 // end is closed so no blocks will exit
-                self.stage2_upper();
+                self.stage2_hold();
             }
             Command::ScoreLow => {
-                self.close_end();
                 self.stage0_out();
                 self.stage1_out();
                 // might cause middle scoring if blocks are present at the end of the intake
                 self.stage2_lower();
             }
             Command::ScoreMiddle => {
-                // so bad blocks can be thrown out
-                self.open_end();
+                // if self.should_reverse() {
+                //     self.stage1_out();
+                //     self.stage2_lower();
+                // } else {
+                //     self.handle_detection(
+                //         // bad block detected, redirect to upper
+                //         Self::stage2_upper,
+                //         // bad block is out, go back to lower
+                //         Self::stage2_lower,
+                //     );
+                //     self.stage1_in();
+                // }
 
-                if self.should_reverse() {
-                    self.stage1_out();
-                    self.stage2_lower();
-                } else {
-                    self.handle_detection(
-                        // bad block detected, redirect to upper
-                        Self::stage2_upper,
-                        // bad block is out, go back to lower
-                        Self::stage2_lower,
-                    );
-                    self.stage1_in();
-                }
-
+                self.stage2_lower();
+                self.stage1_in();
                 self.stage0_in();
             }
             Command::ScoreLong => {
-                // so good blocks can be scored
-                self.open_end();
-
-                if self.should_reverse() {
-                    self.stage1_out();
-                    self.stage2_lower();
-                } else {
-                    self.handle_detection(
-                        // bad block detected, redirect to lower
-                        Self::stage2_lower,
-                        // bad block is out, go back to upper
-                        Self::stage2_upper,
-                    );
-                    self.stage1_in();
-                }
+                // if self.should_reverse() {
+                //     self.stage1_out();
+                //     self.stage2_lower();
+                // } else {
+                //     self.handle_detection(
+                //         // bad block detected, redirect to lower
+                //         Self::stage2_lower,
+                //         // bad block is out, go back to upper
+                //         Self::stage2_upper,
+                //     );
+                //     self.stage1_in();
+                // }
+                self.stage2_upper();
+                self.stage1_in();
 
                 self.stage0_in();
             }
